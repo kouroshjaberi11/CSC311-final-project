@@ -172,22 +172,27 @@ def main():
     #####################################################################
     # Set model hyperparameters. 10, 50, 100, 200, 500
     k_s = [10, 50, 100, 200, 500]
+    # Optimal Parameters
     k = 10
     learn = 0.005
-    epoch = 500
-    lambs = [0, 0.1]
-    for lam in lambs:
-        # for lam in lambs:
-        print("k: " + str(k) + " learn: " + str(learn) + " lambda: " + str(lam))
-        model = AutoEncoder(train_matrix.shape[1], k=k)
+    epoch = 211
+    lam = 0
+    # for lam in lambs:
+    print("k: " + str(k) + " learn: " + str(learn) + " lambda: " + str(lam))
+    model = AutoEncoder(train_matrix.shape[1], k=k)
 
-        # Set optimization hyperparameters.
-        lr = learn
-        num_epoch = epoch
-        lamb = lam
+    # Set optimization hyperparameters.
+    lr = learn
+    num_epoch = epoch
+    lamb = lam
 
-        train(model, lr, lamb, train_matrix, zero_train_matrix,
-            valid_data, num_epoch)
+    train(model, lr, lamb, train_matrix, zero_train_matrix,
+        valid_data, num_epoch)
+    
+    test_acc = evaluate (model, zero_train_matrix, test_data)
+
+    print("test accuracy: " + str(test_acc))
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################

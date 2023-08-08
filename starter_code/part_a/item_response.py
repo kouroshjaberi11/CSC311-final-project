@@ -105,7 +105,7 @@ def irt(data, val_data, lr, iterations):
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
-        score = evaluate(data=val_data, theta=theta, beta=beta)
+        _, score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
         print("NLLK: {} \t Score: {}".format(neg_lld, score))
         theta, beta = update_theta_beta(data, lr, theta, beta)
@@ -129,14 +129,14 @@ def evaluate(data, theta, beta):
         x = (theta[u] - beta[q])
         p_a = sigmoid(x)
         pred.append(p_a >= 0.5)
-    return np.sum((data["is_correct"] == np.array(pred))) \
+    return pred, np.sum((data["is_correct"] == np.array(pred))) \
            / len(data["is_correct"])
 
 
 def main():
     train_data = load_train_csv("../data")
     # You may optionally use the sparse matrix.
-    sparse_matrix = load_train_sparse("../data")
+    sparse_matrix = load_train_sparse("../data").toarray()
     val_data = load_valid_csv("../data")
     test_data = load_public_test_csv("../data")
 
@@ -146,10 +146,11 @@ def main():
     # code, report the validation and test accuracy.                    #
     #####################################################################
     # print(train_data.shape)
-    iteration = 8
+    iteration = 3
     learn = 0.03
     theta, beta, acc = irt (sparse_matrix, val_data, learn, iteration)
-    test_acc = evaluate (test_data, theta, beta)
+    pred, test_acc = evaluate (test_data, theta, beta)
+    print(pred)
     print("Final Validation accuracy: " + str(acc))
     print("Final Test Accuracy: " + str(test_acc))
     #####################################################################
