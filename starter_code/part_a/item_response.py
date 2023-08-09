@@ -1,12 +1,11 @@
-import random
 
 from matplotlib import pyplot as plt
 import numpy as np
-import sys
-
-sys.path.append('../')
-from starter_code.utils import *
 import math
+import sys
+sys.path.append('../')
+from utils import *
+
 
 
 def sigmoid(x):
@@ -40,23 +39,14 @@ def neg_log_likelihood(data, theta, beta):
     #         log_lklihood += np.log(1 - sigmoid(theta[data['user_id'][i]] - beta[data['question_id'][i]]))
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
-            log_lklihood += (theta[i] - beta[j]) - np.log(1 + np.exp(theta[i] - beta[j]))
+            if not np.isnan(data[i, j]):
+                # print(data[i, j])
+                log_lklihood += data[i, j] * ((theta[i] - beta[j]) - np.log(1 + np.exp(theta[i] - beta[j])))
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
     return -log_lklihood
 
-
-def grd_wrt_theta_helper(cij, p_cij):
-    if math.isnan(cij):  # we don't want the model to focus on empty data
-        return 0
-    return (cij * (1 - p_cij)) + ((1 - cij) * p_cij)
-
-
-def grd_wrt_beta_helper(cij, p_cij):
-    if math.isnan(cij):
-        return 0
-    return - (cij * (1 - p_cij)) - ((1 - cij) * p_cij)
 
 def update_theta_beta(data, lr, theta, beta):
     """ Update theta and beta using gradient descent.
@@ -79,26 +69,20 @@ def update_theta_beta(data, lr, theta, beta):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
-    n, m = data.shape
-    n2 = n//2
-    m2 = m//2
-    lam = 0.0001
-    reg = 0
-    for i in range(n):
+    for i in range(data.shape[0]):
         gr_theta_i = 0.0
-        for j in random.sample(range(m), m2):
-            p_cij = sigmoid(theta[i] - beta[j])
-            gr_theta_i += grd_wrt_theta_helper(data[i, j], p_cij)
-        reg = lam * (theta[i] - beta).sum() * -1
-        theta[i] += (lr * gr_theta_i + reg)
-
-    for j in range(m):
+        for j in range(data.shape[1]):
+            if not np.isnan(data[i, j]):
+                p_cij = sigmoid(theta[i]-beta[j])
+                gr_theta_i += (data[i, j] - p_cij)
+        theta[i] += lr * gr_theta_i
+    for j in range(data.shape[1]):
         gr_beta_j = 0.0
-        for i in random.sample(range(n), n2):
-            p_cij = sigmoid(theta[i] - beta[j])
-            gr_beta_j += grd_wrt_beta_helper(data[i, j], p_cij)
-        reg = lam * (theta - beta[j]).sum()
-        beta[j] += (lr * gr_beta_j + reg)
+        for i in range(data.shape[0]):
+            if not np.isnan(data[i, j]):
+                p_cij = sigmoid(theta[i] - beta[j])
+                gr_beta_j += (p_cij - data[i, j])
+        beta[j] += lr * gr_beta_j
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -126,7 +110,7 @@ def irt(data, val_data, lr, iterations):
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
-        score = evaluate(data=val_data, theta=theta, beta=beta)
+        _, score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
         print("NLLK: {} \t Score: {}".format(neg_lld, score))
         theta, beta = update_theta_beta(data, lr, theta, beta)
@@ -150,28 +134,28 @@ def evaluate(data, theta, beta):
         x = (theta[u] - beta[q])
         p_a = sigmoid(x)
         pred.append(p_a >= 0.5)
-    print(np.array(pred).sum() / len(pred))
-    return np.sum((data["is_correct"] == np.array(pred))) \
+    return pred, np.sum((data["is_correct"] == np.array(pred))) \
            / len(data["is_correct"])
 
 
 def main():
     train_data = load_train_csv("../data")
     # You may optionally use the sparse matrix.
-    sparse_matrix = load_train_sparse("../data")
+    sparse_matrix = load_train_sparse("../data").toarray()
     val_data = load_valid_csv("../data")
     test_data = load_public_test_csv("../data")
-
+    print(sparse_matrix[1, 1])
     #####################################################################
     # TODO:                                                             #
     # Tune learning rate and number of iterations. With the implemented #
     # code, report the validation and test accuracy.                    #
     #####################################################################
     # print(train_data.shape)
-    iteration = 8
-    learn = 0.1
-    theta, beta, acc = irt(sparse_matrix, val_data, learn, iteration)
-    test_acc = evaluate(test_data, theta, beta)
+    iteration = 100  # needs tuning
+    learn = 0.005
+    theta, beta, acc = irt (sparse_matrix, val_data, learn, iteration)
+    pred, test_acc = evaluate (test_data, theta, beta)
+    print(pred)
     print("Final Validation accuracy: " + str(acc))
     print("Final Test Accuracy: " + str(test_acc))
     #####################################################################
@@ -195,7 +179,7 @@ def main():
             p_j[j][i] = sigmoid(sorted_theta[i] - beta[j_s[j]])
     for i in range(3):
         plt.plot(sorted_theta, p_j[i], label='Question ' + str(j_s[i]))
-
+    
     plt.xlabel('Theta')
     plt.ylabel('Probability of Correct Response')
     plt.title('Probability of Correct Response vs. Theta for Three Questions')
