@@ -30,10 +30,10 @@ def neg_log_likelihood(data, theta, beta):
 
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
-            if np.isnan(data[i, j]):
-                continue
-            p = sigmoid(theta[i] - beta[j])
-            log_lklihood += (data[i, j] * np.log(p)) - ((1 - data[i, j]) * np.log(1 - p))
+            if not np.isnan(data[i, j]):
+                p = sigmoid(theta[i] - beta[j])
+                log_lklihood += (data[i, j] * np.log(p)) - ((1 - data[i, j]) * np.log(1 - p))
+        
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -61,6 +61,7 @@ def update_theta_beta(data, lr, theta, beta):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
+
     n, m = data.shape
     theta_tile = np.tile(np.reshape(theta, (n, 1)), (1, m))
     beta_tile = np.tile(beta, (n, 1))
@@ -69,6 +70,7 @@ def update_theta_beta(data, lr, theta, beta):
     y = sigmoid_all(z)
     theta = theta + (lr * np.nansum(data - y, axis=1).T)
     beta = beta + (lr * np.nansum(y - data, axis=0))
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -96,7 +98,7 @@ def irt(data, val_data, lr, iterations):
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
-        _, score = evaluate(data=val_data, theta=theta, beta=beta)
+        score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
         print("NLLK: {} \t Score: {}".format(neg_lld, score))
         theta, beta = update_theta_beta(data, lr, theta, beta)
@@ -120,7 +122,7 @@ def evaluate(data, theta, beta):
         x = (theta[u] - beta[q])
         p_a = sigmoid(x)
         pred.append(p_a >= 0.5)
-    return pred, np.sum((data["is_correct"] == np.array(pred))) \
+    return np.sum((data["is_correct"] == np.array(pred))) \
            / len(data["is_correct"])
 
 
@@ -130,18 +132,18 @@ def main():
     sparse_matrix = load_train_sparse("../data").toarray()
     val_data = load_valid_csv("../data")
     test_data = load_public_test_csv("../data")
-    print(sparse_matrix[1, 1])
+
     #####################################################################
     # TODO:                                                             #
     # Tune learning rate and number of iterations. With the implemented #
     # code, report the validation and test accuracy.                    #
     #####################################################################
-    # print(train_data.shape)
-    iteration = 100  # needs tuning
+
+    iteration = 69
     learn = 0.005
-    theta, beta, acc = irt(sparse_matrix, val_data, learn, iteration)
-    pred, test_acc = evaluate(test_data, theta, beta)
-    print(pred)
+    theta, beta, acc = irt (sparse_matrix, val_data, learn, iteration)
+    test_acc = evaluate (test_data, theta, beta)
+
     print("Final Validation accuracy: " + str(acc))
     print("Final Test Accuracy: " + str(test_acc))
     #####################################################################
@@ -153,7 +155,6 @@ def main():
     # Implement part (d)                                                #
     #####################################################################
     j_s = train_data.get('question_id')[0:3]
-    print(j_s)
 
     p_j = np.zeros((3, len(theta)))
 

@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 from torch.autograd import Variable
 
 import torch.nn as nn
@@ -102,15 +103,19 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     # TODO: Add a regularizer to the cost function. 
     
     # Tell PyTorch you are training the model.
-    model.train()
+    
 
     # Define optimizers and loss function.
     optimizer = optim.SGD(model.parameters(), lr=lr)
     num_student = train_data.shape[0]
 
+    val_losses = []
+    train_losses = []
+
     for epoch in range(0, num_epoch):
         train_loss = 0.
-
+        val_loss = 0.
+        model.train()
         for user_id in range(num_student):
             inputs = Variable(zero_train_data[user_id]).unsqueeze(0)
             target = inputs.clone()
@@ -125,12 +130,45 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             loss = torch.sum((output - target) ** 2.)
             loss.backward()
 
-            train_loss += loss.item() + (lamb / 2) * model.get_weight_norm ()
+            train_loss += loss.item() + (lamb / 2) * model.get_weight_norm()
             optimizer.step()
+        train_losses.append(train_loss.detach())
+        model.eval()
+        for i, u in enumerate(valid_data["user_id"]):
+            inputs = Variable(zero_train_data[u]).unsqueeze(0)
+            target = inputs.clone()
+            output = model(inputs)
+
+
+            nan_mask = np.isnan(train_data[u].unsqueeze(0).numpy())
+            target[0][nan_mask] = output[0][nan_mask]
+
+            loss = torch.sum((output - target) ** 2.)
+            loss.backward()
+
+            val_loss += loss.item()
+            
+        val_losses.append(val_loss)
+        
 
         valid_acc = evaluate(model, zero_train_data, valid_data)
-        print("Epoch: {} \tTraining Cost: {:.6f}\t "
-              "Valid Acc: {}".format(epoch, train_loss, valid_acc))
+        print("Epoch: {} \tTraining Cost: {:.6f}\t Val Cost: {:.6f}\t "
+              "Valid Acc: {}".format(epoch, train_loss, val_loss, valid_acc))
+        
+    #Plot and report:
+    losses = [train_losses, val_losses]
+    labels = ["Train Losses", "Val Losses"]
+    for i in range(len(losses)):
+        plt.figure()
+        plt.plot(range(0, epoch+1), losses[i], label=labels[i])
+
+        plt.xlabel("Epoch")
+        plt.ylabel("Cost")
+        plt.title("Training and Validation objective changes")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -176,7 +214,7 @@ def main():
     k = 10
     learn = 0.005
     epoch = 211
-    lam = 0
+    lam = 0.
     # for lam in lambs:
     print("k: " + str(k) + " learn: " + str(learn) + " lambda: " + str(lam))
     model = AutoEncoder(train_matrix.shape[1], k=k)
