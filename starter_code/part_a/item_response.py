@@ -1,9 +1,9 @@
 
 from matplotlib import pyplot as plt
 import numpy as np
+import math
 import sys
-sys.path.append('../')
-from utils import *
+from starter_code.utils import *
 
 
 
@@ -44,6 +44,11 @@ def neg_log_likelihood(data, theta, beta):
     #####################################################################
     return -log_lklihood
 
+def gradient_theta(cij, pij):
+    return (cij*(1-pij)) - (pij*(1-cij))
+
+def gradient_beta(cij, pij):
+    return (pij*(1-cij)) - (cij*(1-pij))
 
 def update_theta_beta(data, lr, theta, beta):
     """ Update theta and beta using gradient descent.
@@ -69,14 +74,16 @@ def update_theta_beta(data, lr, theta, beta):
     for i in range(data.shape[0]):
         gr_theta_i = 0.0
         for j in range(data.shape[1]):
-            p_cij = sigmoid(theta[i]-beta[j])
-            gr_theta_i += (1 - p_cij)
+            if not np.isnan(data[i, j]):
+                p_cij = sigmoid(theta[i]-beta[j])
+                gr_theta_i += gradient_theta(data[i,j], p_cij)
         theta[i] += lr * gr_theta_i
     for j in range(data.shape[1]):
         gr_beta_j = 0.0
         for i in range(data.shape[0]):
-            p_cij = sigmoid(theta[i] - beta[j])
-            gr_beta_j += (p_cij - 1)
+            if not np.isnan(data[i, j]):
+                p_cij = sigmoid(theta[i] - beta[j])
+                gr_beta_j += gradient_beta(data[i,j], p_cij)
         beta[j] += lr * gr_beta_j
     #####################################################################
     #                       END OF YOUR CODE                            #
@@ -139,15 +146,15 @@ def main():
     sparse_matrix = load_train_sparse("../data").toarray()
     val_data = load_valid_csv("../data")
     test_data = load_public_test_csv("../data")
-
+    print(sparse_matrix[1, 1])
     #####################################################################
     # TODO:                                                             #
     # Tune learning rate and number of iterations. With the implemented #
     # code, report the validation and test accuracy.                    #
     #####################################################################
     # print(train_data.shape)
-    iteration = 3
-    learn = 0.03
+    iteration = 100  # needs tuning
+    learn = 0.005
     theta, beta, acc = irt (sparse_matrix, val_data, learn, iteration)
     pred, test_acc = evaluate (test_data, theta, beta)
     print(pred)
