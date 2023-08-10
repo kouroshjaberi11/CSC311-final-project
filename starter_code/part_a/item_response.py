@@ -1,11 +1,8 @@
-
 from matplotlib import pyplot as plt
 import numpy as np
 import math
 import sys
-sys.path.append('../')
-from utils import *
-
+from starter_code.utils import *
 
 
 def sigmoid(x):
@@ -34,7 +31,9 @@ def neg_log_likelihood(data, theta, beta):
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
             if not np.isnan(data[i, j]):
-                log_lklihood += (data[i, j] * (theta[i] - beta[j])) - np.log(1 + np.exp(theta[i] - beta[j]))
+                p = sigmoid(theta[i] - beta[j])
+                log_lklihood += (data[i, j] * np.log(p)) - ((1 - data[i, j]) * np.log(1 - p))
+        
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -62,20 +61,16 @@ def update_theta_beta(data, lr, theta, beta):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
-    for i in range(data.shape[0]):
-        gr_theta_i = 0.0
-        for j in range(data.shape[1]):
-            if not np.isnan(data[i, j]):
-                p_cij = sigmoid(theta[i]-beta[j])
-                gr_theta_i += (data[i, j] - p_cij)
-        theta[i] += lr * gr_theta_i
-    for j in range(data.shape[1]):
-        gr_beta_j = 0.0
-        for i in range(data.shape[0]):
-            if not np.isnan(data[i, j]):
-                p_cij = sigmoid(theta[i] - beta[j])
-                gr_beta_j += (p_cij - data[i, j])
-        beta[j] += lr * gr_beta_j
+
+    n, m = data.shape
+    theta_tile = np.tile(np.reshape(theta, (n, 1)), (1, m))
+    beta_tile = np.tile(beta, (n, 1))
+    z = theta_tile - beta_tile
+    sigmoid_all = np.vectorize(sigmoid)
+    y = sigmoid_all(z)
+    theta = theta + (lr * np.nansum(data - y, axis=1).T)
+    beta = beta + (lr * np.nansum(y - data, axis=0))
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -137,15 +132,18 @@ def main():
     sparse_matrix = load_train_sparse("../data").toarray()
     val_data = load_valid_csv("../data")
     test_data = load_public_test_csv("../data")
+
     #####################################################################
     # TODO:                                                             #
     # Tune learning rate and number of iterations. With the implemented #
     # code, report the validation and test accuracy.                    #
     #####################################################################
+
     iteration = 69
     learn = 0.005
     theta, beta, acc = irt (sparse_matrix, val_data, learn, iteration)
     test_acc = evaluate (test_data, theta, beta)
+
     print("Final Validation accuracy: " + str(acc))
     print("Final Test Accuracy: " + str(test_acc))
     #####################################################################
@@ -168,7 +166,7 @@ def main():
             p_j[j][i] = sigmoid(sorted_theta[i] - beta[j_s[j]])
     for i in range(3):
         plt.plot(sorted_theta, p_j[i], label='Question ' + str(j_s[i]))
-    
+
     plt.xlabel('Theta')
     plt.ylabel('Probability of Correct Response')
     plt.title('Probability of Correct Response vs. Theta for Three Questions')
