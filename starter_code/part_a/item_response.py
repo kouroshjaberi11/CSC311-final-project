@@ -1,10 +1,8 @@
-
 from matplotlib import pyplot as plt
 import numpy as np
 import math
 import sys
 from starter_code.utils import *
-
 
 
 def sigmoid(x):
@@ -30,25 +28,17 @@ def neg_log_likelihood(data, theta, beta):
     #####################################################################
     log_lklihood = 0.
 
-    # for i in range(len(data['user_id'])):
-    #     if data['is_correct'] == 1:
-    #         log_lklihood += np.log(sigmoid(theta[data['user_id'][i]] - beta[data['question_id'][i]]))
-    #     else:
-    #         # print(theta[data['user_id'][i])
-    #         log_lklihood += np.log(1 - sigmoid(theta[data['user_id'][i]] - beta[data['question_id'][i]]))
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
-            log_lklihood += (theta[i] - beta[j]) - np.log(1 + np.exp(theta[i] - beta[j]))
+            if np.isnan(data[i, j]):
+                continue
+            p = sigmoid(theta[i] - beta[j])
+            log_lklihood += (data[i, j] * np.log(p)) - ((1 - data[i, j]) * np.log(1 - p))
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
     return -log_lklihood
 
-def gradient_theta(cij, pij):
-    return (cij*(1-pij)) - (pij*(1-cij))
-
-def gradient_beta(cij, pij):
-    return (pij*(1-cij)) - (cij*(1-pij))
 
 def update_theta_beta(data, lr, theta, beta):
     """ Update theta and beta using gradient descent.
@@ -71,20 +61,14 @@ def update_theta_beta(data, lr, theta, beta):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
-    for i in range(data.shape[0]):
-        gr_theta_i = 0.0
-        for j in range(data.shape[1]):
-            if not np.isnan(data[i, j]):
-                p_cij = sigmoid(theta[i]-beta[j])
-                gr_theta_i += gradient_theta(data[i,j], p_cij)
-        theta[i] += lr * gr_theta_i
-    for j in range(data.shape[1]):
-        gr_beta_j = 0.0
-        for i in range(data.shape[0]):
-            if not np.isnan(data[i, j]):
-                p_cij = sigmoid(theta[i] - beta[j])
-                gr_beta_j += gradient_beta(data[i,j], p_cij)
-        beta[j] += lr * gr_beta_j
+    n, m = data.shape
+    theta_tile = np.tile(np.reshape(theta, (n, 1)), (1, m))
+    beta_tile = np.tile(beta, (n, 1))
+    z = theta_tile - beta_tile
+    sigmoid_all = np.vectorize(sigmoid)
+    y = sigmoid_all(z)
+    theta = theta + (lr * np.nansum(data - y, axis=1).T)
+    beta = beta + (lr * np.nansum(y - data, axis=0))
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -155,8 +139,8 @@ def main():
     # print(train_data.shape)
     iteration = 100  # needs tuning
     learn = 0.005
-    theta, beta, acc = irt (sparse_matrix, val_data, learn, iteration)
-    pred, test_acc = evaluate (test_data, theta, beta)
+    theta, beta, acc = irt(sparse_matrix, val_data, learn, iteration)
+    pred, test_acc = evaluate(test_data, theta, beta)
     print(pred)
     print("Final Validation accuracy: " + str(acc))
     print("Final Test Accuracy: " + str(test_acc))
@@ -181,7 +165,7 @@ def main():
             p_j[j][i] = sigmoid(sorted_theta[i] - beta[j_s[j]])
     for i in range(3):
         plt.plot(sorted_theta, p_j[i], label='Question ' + str(j_s[i]))
-    
+
     plt.xlabel('Theta')
     plt.ylabel('Probability of Correct Response')
     plt.title('Probability of Correct Response vs. Theta for Three Questions')
