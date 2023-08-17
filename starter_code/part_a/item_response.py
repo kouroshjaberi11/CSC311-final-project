@@ -2,7 +2,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import math
 import sys
-from starter_code.utils import *
+sys.path.append('../')
+from utils import *
 
 
 def sigmoid(x):
@@ -104,7 +105,7 @@ def irt(data, val_data, lr, iterations):
         theta, beta = update_theta_beta(data, lr, theta, beta)
 
     # TODO: You may change the return values to achieve what you want.
-    return theta, beta, val_acc_lst
+    return theta, beta, score
 
 
 def evaluate(data, theta, beta):
@@ -139,7 +140,7 @@ def main():
     # code, report the validation and test accuracy.                    #
     #####################################################################
 
-    iteration = 69
+    iteration = 60
     learn = 0.005
     theta, beta, acc = irt (sparse_matrix, val_data, learn, iteration)
     test_acc = evaluate (test_data, theta, beta)
@@ -154,20 +155,22 @@ def main():
     # TODO:                                                             #
     # Implement part (d)                                                #
     #####################################################################
-    j_s = train_data.get('question_id')[0:3]
+    j_s = train_data.get('question_id')[3:6]
 
     p_j = np.zeros((3, len(theta)))
 
-    sorted_theta_idx = np.argsort(theta)
-    sorted_theta = theta[sorted_theta_idx]
-
+    # sorted_theta_idx = np.argsort(theta)
+    # sorted_theta = theta[sorted_theta_idx]
+    # students_idx = np.argsort(train_data.get('user_id'))
+    # students = train_data.get('user_id')[students_idx]
+    
     for j in range(3):
-        for i in range(len(sorted_theta)):
-            p_j[j][i] = sigmoid(sorted_theta[i] - beta[j_s[j]])
+        for i in range(sparse_matrix.shape[0]):
+            p_j[j][i] = sigmoid(theta[i] - beta[j_s[j]])
     for i in range(3):
-        plt.plot(sorted_theta, p_j[i], label='Question ' + str(j_s[i]))
+        plt.plot(range(sparse_matrix.shape[0]), p_j[i], label='Question ' + str(j_s[i]))
 
-    plt.xlabel('Theta')
+    plt.xlabel('Student ID')
     plt.ylabel('Probability of Correct Response')
     plt.title('Probability of Correct Response vs. Theta for Three Questions')
     plt.legend()

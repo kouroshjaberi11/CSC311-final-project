@@ -3,6 +3,7 @@ from scipy.sparse import load_npz
 import numpy as np
 import csv
 import os
+import ast
 
 
 def _load_csv(path):
@@ -60,6 +61,54 @@ def load_train_csv(root_dir="/data"):
     path = os.path.join(root_dir, "train_data.csv")
     return _load_csv(path)
 
+def load_student_csv(root_dir="/data"):
+    path = os.path.join(root_dir, "student_meta.csv")
+
+    if not os.path.exists(path):
+        raise Exception("The specified path {} does not exist.".format(path))
+    # Initialize the data.
+    data = {
+        "user_id": [],
+        "gender": []
+    }
+    # Iterate over the row to fill in the data.
+    with open(path, "r") as csv_file:
+        reader = csv.reader(csv_file)
+        for row in reader:
+            try:
+                data["user_id"].append(int(row[0]))
+                data["gender"].append(int(row[1]))
+            except ValueError:
+                # Pass first row.
+                pass
+            except IndexError:
+                # is_correct might not be available.
+                pass
+    return data
+
+def load_subject_csv(root_dir="/data"):
+    path = os.path.join(root_dir, "question_meta.csv")
+    if not os.path.exists(path):
+        raise Exception("The specified path {} does not exist.".format(path))
+    # Initialize the data.
+    data = {
+        "question_id": [],
+        "subject_id": []
+    }
+    # Iterate over the row to fill in the data.
+    with open(path, "r") as csv_file:
+        reader = csv.reader(csv_file)
+        for row in reader:
+            try:
+                data["question_id"].append(int(row[0]))
+                data["subject_id"].append(ast.literal_eval(row[1]))
+            except ValueError:
+                # Pass first row.
+                pass
+            except IndexError:
+                # is_correct might not be available.
+                pass
+    return data
 
 def load_valid_csv(root_dir="/data"):
     """ Load the validation data as a dictionary.
